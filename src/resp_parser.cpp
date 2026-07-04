@@ -108,5 +108,17 @@ std::optional<RespMessage> resp_parser(std::string_view encodedMessage,int &pos)
         }
         result.type = RespType::Array;
     }
+    else if(encodedMessage[pos]==':'){
+        pos++;
+        int num = getNumber(encodedMessage, pos);
+        if(num==-1){
+            return std::nullopt;
+        }
+        result.type=RespType::Integer;
+        result.data = std::to_string(num);
+    }
+    else{
+        return std::nullopt;
+    }
     return result;
 }

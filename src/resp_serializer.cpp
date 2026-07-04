@@ -54,5 +54,14 @@ std::string resp_serializer(const RespMessage &messages){
             encodedMessage += resp_serializer(message);
         }
     }
+    else if(messages.type == RespType::Integer){
+        if(messageSize==0){
+            return ":\r\n";
+        }
+        encodedMessage = ":";
+        encodedMessage += messages.data;
+        encodedMessage.push_back('\r');
+        encodedMessage.push_back('\n');
+    }
     return encodedMessage;
 }

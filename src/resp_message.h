@@ -7,7 +7,8 @@ enum class RespType {
     Bulk,
     Error,
     Array,
-    Null
+    Null,
+    Integer
 };
 struct RespMessage {
     RespType type;
