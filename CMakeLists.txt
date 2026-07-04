@@ -15,10 +15,16 @@ FetchContent_Declare(
 )
 
 FetchContent_MakeAvailable(googletest)
-add_library(resp_lib src/resp_serializer.cpp src/resp_parser.cpp)
+
+# all the reusable logic
+add_library(resp_lib src/resp_serializer.cpp src/resp_parser.cpp src/command_handler.cpp)
 
 
+# Main Server
+add_executable(server src/server.cpp)
+target_link_libraries(server PRIVATE resp_lib)
+
+# Tests
 add_executable(test_resp tests/test_resp.cpp)
-add_executable(milestone5 src/milestone5.cpp)
-add_test(NAME RespTests COMMAND test_resp)
 target_link_libraries(test_resp PRIVATE resp_lib gtest_main)
+add_test(NAME RespTests COMMAND test_resp)

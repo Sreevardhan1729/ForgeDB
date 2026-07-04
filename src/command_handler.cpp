@@ -1,5 +1,7 @@
 #include "command_handler.h"
 #include "resp_message.h"
+#include <algorithm>
+#include <cctype>
 #include <functional>
 #include <string>
 #include <unordered_map>
@@ -36,23 +38,41 @@ RespMessage handleGet(const RespMessage &message){
     }
     return RespMessage{RespType::Null};
 }
+RespMessage handleDel(const RespMessage &message){
+    if(message.elements.size()<2){
+        return RespMessage{RespType::Error,"DEL should have atleast 1 Argument"};
+    }
+    int count=0;
+    int numElements = message.elements.size();
+    for(int idx=1;idx<numElements;idx++){
+        auto it = store.find(message.elements[idx].data);
+        if(it!=store.end()){
+            store.erase(it);
+            count++;
+        }
+    }
+    return RespMessage{RespType::Integer,std::to_string(count)};
+}
+
+void clearStore(){
+    store.clear();
+}
 
 static std::unordered_map<std::string, std::function<RespMessage(const RespMessage&)>> dispatchTable={
     {"PING",handlePing},
     {"GET",handleGet},
     {"SET",handleSet},
+    {"DEL",handleDel},
 };
 
 RespMessage handleCommand(const RespMessage &message){
-    if(message.type!=RespType::Array){
-        return RespMessage{RespType::Error,"Data Format Incorrect"};
-    }
     std::string commandName = message.elements[0].data;
+    std::transform(commandName.begin(),commandName.end(),commandName.begin(),::toupper);
     auto it = dispatchTable.find(commandName);
     if(it!=dispatchTable.end()){
         return it->second(message);
     }
     else{
-        return RespMessage{RespType::Error,"Invlaid Dispater command"};
+        return RespMessage{RespType::Error,"Invlaid Dispatcher command"};
     }
 }
