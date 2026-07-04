@@ -1,4 +1,3 @@
-#include <string_view>
 #include<vector>
 #include<string>
 #include "resp_serializer.h"
@@ -7,6 +6,9 @@ std::string resp_serializer(const RespMessage &messages){
     const std::string &message = messages.data;
     int messageSize = message.length();
     std::string encodedMessage;
+    if(messages.type==RespType::Null){
+        return "$-1\r\n";
+    }
     if(messages.type==RespType::Simple){
         if(messageSize==0){
             return "+\r\n";

@@ -6,7 +6,8 @@ enum class RespType {
     Simple,
     Bulk,
     Error,
-    Array
+    Array,
+    Null
 };
 struct RespMessage {
     RespType type;
