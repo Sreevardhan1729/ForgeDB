@@ -1,6 +1,8 @@
 #include"command_handler.h"
 #include <cerrno>
+#include <chrono>
 #include <cstddef>
+#include <ctime>
 #include<fcntl.h>
 #include <netinet/in.h>
 #include <optional>
@@ -44,11 +46,19 @@ int main(){
     }
 
     std::vector<struct kevent> eventList(64);
+    auto lastCleanUp = std::chrono::steady_clock::now();
+    struct timespec timout = {1,0};
     while(true){
-        int numEvents = kevent(kq, nullptr, 0, eventList.data(), 64, nullptr);
+        int numEvents = kevent(kq, nullptr, 0, eventList.data(), 64, &timout);
         if(numEvents==-1){
             break;
         }
+        auto now = std::chrono::steady_clock::now();
+        if(now - lastCleanUp >= std::chrono::seconds(1)){
+            cleanUpExpiredKeys();
+            lastCleanUp = now;
+        }
+
         for(int idx=0;idx<numEvents;idx++){
             struct kevent event = eventList[idx];
             if(event.filter == EVFILT_READ){
