@@ -26,7 +26,8 @@ int main(){
     address.sin_family = AF_INET;
     address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
     address.sin_port = htons(6379);
-
+    int opt=1;
+    setsockopt(socket_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
     int val = bind(socket_fd, (const struct sockaddr *)&address, sizeof(address));
     if(val==-1){
         return -1;
