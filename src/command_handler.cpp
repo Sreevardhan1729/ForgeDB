@@ -8,12 +8,24 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <unordered_set>
 #include <variant>
+
+using DataVariant = std::variant<
+    std::string,
+    std::deque<std::string>,
+    std::unordered_map<std::string, std::string>,
+    std::unordered_set<std::string>
+>;
 struct Store{
-    std::variant<std::string,std::deque<std::string>> data;
+    DataVariant data;
     std::optional<std::chrono::steady_clock::time_point> expiresAt;
 };
 static std::unordered_map<std::string, Store> store;
+template<typename T>
+T* getTypedData(Store &store_entry){
+    return std::get_if<T>(&store_entry.data);
+}
 std::optional<int> getNumber(std::string_view time){
     int val = 0;
     int i=0;
@@ -27,12 +39,6 @@ std::optional<int> getNumber(std::string_view time){
         val = (val*10)+(int)(time[i]-'0');
     }
     return negative ? -val : val;
-}
-bool checkVariantString(std::variant<std::string,std::deque<std::string>> &data){
-    if(std::holds_alternative<std::string>(data)){
-        return true;
-    }
-    return false;
 }
 RespMessage errorMessage(std::string error){
     return RespMessage{RespType::Error,error};
@@ -81,10 +87,11 @@ RespMessage handleGet(const RespMessage &message){
             store.erase(it);
             return RespMessage{RespType::Null};
         }
-        if(!checkVariantString(it->second.data)){
+        auto* value = getTypedData<std::string>(it->second);
+        if(!value){
             return errorMessage("WRONGTYPE Operation against a key holding the wrong kind of value");
         }
-        return RespMessage{RespType::Bulk,std::get<std::string>(it->second.data)};
+        return RespMessage{RespType::Bulk,*value};
             
     }
     return RespMessage{RespType::Null};
@@ -150,10 +157,11 @@ RespMessage handleLpush(const RespMessage &message){
     auto it = store.find(message.elements[1].data);
     
     if(it!=store.end()){
-        if(checkVariantString(it->second.data)){
+        auto *value = getTypedData<std::deque<std::string>>(it->second);
+        if(!value){
             return errorMessage("WRONGTYPE Operation against a key holding the wrong kind of value");
         }
-        std::deque<std::string> &currList = std::get<std::deque<std::string>>(it->second.data);
+        std::deque<std::string> &currList = *value;
         for(int idx=2;idx<message.elements.size();idx++){
             currList.push_front(message.elements[idx].data);
         }
@@ -174,10 +182,11 @@ RespMessage handleRpush(const RespMessage &message){
     }
     auto it = store.find(message.elements[1].data);
     if(it!=store.end()){
-        if(checkVariantString(it->second.data)){
+        auto *value = getTypedData<std::deque<std::string>>(it->second);
+        if(!value){
             return errorMessage("WRONGTYPE Operation against a key holding the wrong kind of value");
         }
-        std::deque<std::string>& currList = std::get<std::deque<std::string>>(it->second.data);
+        std::deque<std::string>& currList = *value;
         for(int idx=2;idx<message.elements.size();idx++){
             currList.push_back(message.elements[idx].data);
         }
@@ -198,19 +207,20 @@ RespMessage handleLpop(const RespMessage &message){
     }
     auto it = store.find(message.elements[1].data);
     if(it!=store.end()){
-        if(checkVariantString(it->second.data)){
+        auto *value = getTypedData<std::deque<std::string>>(it->second);
+        if(!value){
             return errorMessage("WRONGTYPE Operation against a key holding the wrong kind of value");
         }
-        std::deque<std::string> &currList = std::get<std::deque<std::string>>(it->second.data);
+        std::deque<std::string> &currList = *value;
         if(currList.empty()){
             return RespMessage{RespType::Null};
         }
-        std::string value = currList.front();
+        std::string front_element = currList.front();
         currList.pop_front();
         if(currList.empty()){
             store.erase(it);
         }
-        return RespMessage{RespType::Bulk,value};
+        return RespMessage{RespType::Bulk,front_element};
     }
     return RespMessage{RespType::Null};
 }
@@ -220,19 +230,20 @@ RespMessage handleRpop(const RespMessage &message){
     }
     auto it = store.find(message.elements[1].data);
     if(it!=store.end()){
-        if(checkVariantString(it->second.data)){
+        auto *value = getTypedData<std::deque<std::string>>(it->second);
+        if(!value){
             return errorMessage("WRONGTYPE Operation against a key holding the wrong kind of value");
         }
-        std::deque<std::string> &currList = std::get<std::deque<std::string>>(it->second.data);
+        std::deque<std::string> &currList = *value;
         if(currList.empty()){
             return RespMessage{RespType::Null};
         }
-        std::string value = currList.back();
+        std::string back_element = currList.back();
         currList.pop_back();
         if(currList.empty()){
             store.erase(it);
         }
-        return RespMessage{RespType::Bulk,value};
+        return RespMessage{RespType::Bulk,back_element};
     }
     return RespMessage{RespType::Null};
 }
@@ -242,7 +253,8 @@ RespMessage handleLrange(const RespMessage &message){
     }
     auto it = store.find(message.elements[1].data);
     if(it != store.end()){
-        if(checkVariantString(it->second.data)){
+        auto *value = getTypedData<std::deque<std::string>>(it->second);
+        if(!value){
             return errorMessage("WRONGTYPE Operation against a key holding the wrong kind of value");
         }
         std::optional<int> start = getNumber(message.elements[2].data);
@@ -250,7 +262,7 @@ RespMessage handleLrange(const RespMessage &message){
         if(!start.has_value() || !end.has_value()){
             return errorMessage("Expiratoion number format wrong");
         }
-        std::deque<std::string> currList = std::get<std::deque<std::string>>(it->second.data);
+        const std::deque<std::string> &currList = *value;
         int currSize = currList.size();
         if(start.value()<0){
             start.value() = currSize+start.value();
@@ -270,6 +282,229 @@ RespMessage handleLrange(const RespMessage &message){
         return result;
     }
     return RespMessage{RespType::Null};
+}
+RespMessage handleHset(const RespMessage &message){
+    if(message.elements.size()<4 || (message.elements.size()&1)){
+        return errorMessage("Invalid number of argument given");
+    }
+    auto it = store.find(message.elements[1].data);
+    int count=0;
+    if(it!=store.end()){
+        auto *value = getTypedData<std::unordered_map<std::string, std::string>>(it->second);
+        if(!value){
+            return errorMessage("WRONGTYPE Operation against a key holding the wrong kind of value");
+        }
+        std::unordered_map<std::string, std::string> &currHash = *value;
+        for(int idx = 2;idx<message.elements.size();idx+=2){
+            std::string fieldKey = message.elements[idx].data;
+            std::string fieldValue = message.elements[idx+1].data;
+            if(currHash.find(fieldKey)==currHash.end()){
+                count++;
+            }
+            currHash[fieldKey]=fieldValue;
+        }
+    }
+    else{
+        std::unordered_map<std::string, std::string> currHash;
+        for(int idx = 2;idx<message.elements.size();idx+=2){
+            std::string fieldKey = message.elements[idx].data;
+            std::string fieldValue = message.elements[idx+1].data;
+            currHash[fieldKey]=fieldValue;
+            count++;
+        }
+        store[message.elements[1].data] = {currHash};
+    }
+    return RespMessage{RespType::Integer,std::to_string(count)};
+}
+RespMessage handleHget(const RespMessage &message){
+    if(message.elements.size()!=3){
+        return errorMessage("HGET need to have exactly 2 arguments");
+    }
+    auto it = store.find(message.elements[1].data);
+    if(it!=store.end()){
+        auto* value = getTypedData<std::unordered_map<std::string, std::string>>(it->second);
+        if(!value){
+            return errorMessage("WRONGTYPE Operation against a key holding the wrong kind of value");
+        }
+        auto fieldIt = value->find(message.elements[2].data);
+        if(fieldIt!=value->end()){
+            return RespMessage{RespType::Bulk,fieldIt->second};
+        }
+        return RespMessage{RespType::Null};
+    }
+    return RespMessage{RespType::Null};
+}
+RespMessage handleHdel(const RespMessage &message){
+    if(message.elements.size()<3){
+        return errorMessage("DEL need to have atleast 2 arguments");
+    }
+    auto it = store.find(message.elements[1].data);
+    int count=0;
+    if(it!=store.end()){
+        auto* value = getTypedData<std::unordered_map<std::string, std::string>>(it->second);
+        if(!value){
+            return errorMessage("WRONGTYPE Operation against a key holding the wrong kind of value");
+        }
+        for(int idx = 2;idx<message.elements.size();idx++){
+            auto fieldIt = value->find(message.elements[idx].data);
+            if(fieldIt!=value->end()){
+                count++;
+                value->erase(fieldIt);
+            }
+        }
+        if(value->size()==0){
+            store.erase(it);
+        }
+    }
+    return RespMessage{RespType::Integer,std::to_string(count)};
+}
+RespMessage handleHgetall(const RespMessage &message){
+    if(message.elements.size()!=2){
+        return errorMessage("GETALL need to have exactly 1 arguments");
+    }
+    auto it = store.find(message.elements[1].data);
+    RespMessage result;
+    result.type=RespType::Array;
+    if(it!=store.end()){
+        auto* value = getTypedData<std::unordered_map<std::string, std::string>>(it->second);
+        if(!value){
+            return errorMessage("WRONGTYPE Operation against a key holding the wrong kind of value");
+        }
+        for(auto mapIt : *value){
+            result.elements.push_back(RespMessage{RespType::Bulk,mapIt.first});
+            result.elements.push_back(RespMessage{RespType::Bulk,mapIt.second});
+        }
+    }
+    return result;
+}
+RespMessage handleSadd(const RespMessage &message){
+    if(message.elements.size()<3){
+        return errorMessage("SADD need to have atleast 2 arguments");
+    }
+    auto it = store.find(message.elements[1].data);
+    int count=0;
+    if(it!=store.end()){
+        auto* value = getTypedData<std::unordered_set<std::string>>(it->second);
+        if(!value){
+            return errorMessage("WRONGTYPE Operation against a key holding the wrong kind of value");
+        }
+        for(int idx = 2;idx<message.elements.size();idx++){
+            auto fieldIt = value->find(message.elements[idx].data);
+            if(fieldIt==value->end()){
+                count++;
+                value->insert(message.elements[idx].data);
+            }
+        }
+    }
+    else{
+        std::unordered_set<std::string> value;
+        for(int idx = 2;idx<message.elements.size();idx++){
+            auto fieldIt = value.find(message.elements[idx].data);
+            if(fieldIt==value.end()){
+                count++;
+                value.insert(message.elements[idx].data);
+            }
+        }
+        store[message.elements[1].data] = {value};
+    }
+    return RespMessage{RespType::Integer,std::to_string(count)};
+}
+RespMessage handleSmembers(const RespMessage &message){
+    if(message.elements.size()!=2){
+        return errorMessage("SMEMBERS need to have exactly 1 arguments");
+    }
+    auto it = store.find(message.elements[1].data);
+    RespMessage result;
+    result.type=RespType::Array;
+    if(it!=store.end()){
+        auto* value = getTypedData<std::unordered_set<std::string>>(it->second);
+        if(!value){
+            return errorMessage("WRONGTYPE Operation against a key holding the wrong kind of value");
+        }
+        for(auto mapIt : *value){
+            result.elements.push_back(RespMessage{RespType::Bulk,mapIt});
+        }
+    }
+    return result;
+}
+RespMessage handleSismember(const RespMessage &message){
+    if(message.elements.size()!=3){
+        return errorMessage("SISMEMBER need to have exactly 3 arguments");
+    }
+    auto it = store.find(message.elements[1].data);
+    if(it!=store.end()){
+        auto* value = getTypedData<std::unordered_set<std::string>>(it->second);
+        if(!value){
+            return errorMessage("WRONGTYPE Operation against a key holding the wrong kind of value");
+        }
+        auto fieldIt = value->find(message.elements[2].data);
+        if(fieldIt!=value->end()){
+            return RespMessage{RespType::Integer,"1"};
+        }
+    }
+    return RespMessage{RespType::Integer,"0"};
+}
+RespMessage handleSrem(const RespMessage &message){
+    if(message.elements.size()<3){
+        return errorMessage("SREM need to have atleast 2 arguments");
+    }
+    auto it = store.find(message.elements[1].data);
+    int count=0;
+    if(it!=store.end()){
+        auto* value = getTypedData<std::unordered_set<std::string>>(it->second);
+        if(!value){
+            return errorMessage("WRONGTYPE Operation against a key holding the wrong kind of value");
+        }
+        for(int idx=2;idx<message.elements.size();idx++){
+            auto fieldIt = value->find(message.elements[idx].data);
+            if(fieldIt!=value->end()){
+                value->erase(fieldIt);
+                count++;
+            }
+        }
+        if(value->size()==0){
+            store.erase(it);
+        }
+    }
+    return RespMessage{RespType::Integer,std::to_string(count)};
+}
+RespMessage handleSinter(const RespMessage &message){
+    if(message.elements.size()<=2){
+        return errorMessage("SINTER need to have atleast 1 arguments");
+    }
+    auto it = store.find(message.elements[1].data);
+    RespMessage result;
+    result.type=RespType::Array;
+    if(it!=store.end()){
+        auto* value = getTypedData<std::unordered_set<std::string>>(it->second);
+        if(!value){
+            return errorMessage("WRONGTYPE Operation against a key holding the wrong kind of value");
+        }
+        std::unordered_set<std::string> baseSet = *value;
+        for(int idx=2;idx<message.elements.size();idx++){
+            auto fieldIt = store.find(message.elements[idx].data);
+            if(fieldIt==store.end()){
+                baseSet.clear();
+                break;
+            }
+            auto* value = getTypedData<std::unordered_set<std::string>>(fieldIt->second);
+            if(!value){
+                return errorMessage("WRONGTYPE Operation against a key holding the wrong kind of value");
+            }
+            for(auto it2 = baseSet.begin();it2!=baseSet.end();){
+                if(value->find(*it2)==value->end()){
+                    it2 = baseSet.erase(it2);
+                }
+                else{
+                    it2++;
+                }
+            }
+        }
+        for(std::string element:baseSet){
+            result.elements.push_back(RespMessage{RespType::Bulk,element});
+        }
+    }
+    return result;
 }
 void clearStore(){
     store.clear();
@@ -297,7 +532,16 @@ static std::unordered_map<std::string, std::function<RespMessage(const RespMessa
     {"RPUSH",handleRpush},
     {"LPOP",handleLpop},
     {"RPOP",handleRpop},
-    {"LRANGE",handleLrange}
+    {"LRANGE",handleLrange},
+    {"HSET",handleHset},
+    {"HGET",handleHget},
+    {"HDEL",handleHdel},
+    {"HGETALL",handleHgetall},
+    {"SADD",handleSadd},
+    {"SMEMBERS",handleSmembers},
+    {"SISMEMBER",handleSismember},
+    {"SREM",handleSrem},
+    {"SINTER",handleSinter},
 };
 
 RespMessage handleCommand(const RespMessage &message){
