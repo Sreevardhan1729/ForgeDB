@@ -17,7 +17,17 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(googletest)
 
 # all the reusable logic
-add_library(resp_lib src/resp_serializer.cpp src/resp_parser.cpp src/command_handler.cpp)
+add_library(resp_lib 
+    src/resp_serializer.cpp 
+    src/resp_parser.cpp 
+    src/commands/general_commands.cpp
+    src/commands/string_commands.cpp
+    src/commands/list_commands.cpp
+    src/commands/hash_commands.cpp
+    src/commands/set_commands.cpp
+    src/datastore.cpp
+    src/utils.cpp
+    src/command_handler.cpp)
 
 
 # Main Server

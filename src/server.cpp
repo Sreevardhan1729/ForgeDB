@@ -56,7 +56,7 @@ int main(){
         }
         auto now = std::chrono::steady_clock::now();
         if(now - lastCleanUp >= std::chrono::seconds(1)){
-            cleanUpExpiredKeys();
+            clearExpiredKeys();
             lastCleanUp = now;
         }
 
