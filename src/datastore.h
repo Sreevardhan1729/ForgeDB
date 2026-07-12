@@ -16,6 +16,10 @@ using DataVariant = std::variant<
 struct Store{
     DataVariant data;
     std::optional<std::chrono::steady_clock::time_point> expiresAt;
+
+    bool operator==(const Store& other) const {
+        return data == other.data && expiresAt == other.expiresAt;
+    }
 };
 
 extern std::unordered_map<std::string, Store> store;

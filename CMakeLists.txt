@@ -18,7 +18,7 @@ FetchContent_MakeAvailable(googletest)
 
 # all the reusable logic
 add_library(resp_lib 
-    src/resp_serializer.cpp 
+    src/resp_serializer.cpp
     src/resp_parser.cpp 
     src/commands/general_commands.cpp
     src/commands/string_commands.cpp
@@ -27,6 +27,7 @@ add_library(resp_lib
     src/commands/set_commands.cpp
     src/datastore.cpp
     src/utils.cpp
+    src/rdb.cpp
     src/command_handler.cpp)
 
 
