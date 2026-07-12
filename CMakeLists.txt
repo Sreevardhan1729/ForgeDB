@@ -28,6 +28,7 @@ add_library(resp_lib
     src/datastore.cpp
     src/utils.cpp
     src/rdb.cpp
+    src/aof.cpp
     src/command_handler.cpp)
 
 

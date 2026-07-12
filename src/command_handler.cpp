@@ -4,7 +4,11 @@
 #include<functional>
 #include <string>
 #include <unordered_map>
+#include "aof.h"
+#include "resp_serializer.h"
 
+static std::unordered_set<std::string> writeCommands =
+  {"SET","DEL","EXPIRE","LPUSH","RPUSH","LPOP","RPOP","HSET","HDEL","SADD","SREM"};
 static std::unordered_map<std::string, std::function<RespMessage(const RespMessage&)>> dispatchTable={
     {"PING",handlePing},
     {"GET",handleGet},
@@ -33,7 +37,13 @@ RespMessage handleCommand(const RespMessage &message){
     std::transform(commandName.begin(),commandName.end(),commandName.begin(),::toupper);
     auto it = dispatchTable.find(commandName);
     if(it!=dispatchTable.end()){
-        return it->second(message);
+        RespMessage result = it->second(message);
+        if(result.type!=RespType::Error && result.type!=RespType::Null){ 
+            if(writeCommands.find(commandName)!=writeCommands.end()){
+                writeToAof(resp_serializer(message));
+            }
+        }
+        return result;
     }
     else{
         return errorMessage("Invlaid Dispatcher command");

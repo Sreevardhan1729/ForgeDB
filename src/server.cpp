@@ -18,6 +18,7 @@
 #include "resp_message.h"
 #include"resp_parser.h"
 #include "resp_serializer.h"
+#include "aof.h"
 
 int main(){
     static std::unordered_map<int, std::string> per_client_buffer;
@@ -49,8 +50,11 @@ int main(){
     }
 
     std::vector<struct kevent> eventList(64);
+    initAof("appendonly.aof");
     loadRDB("dump.rdb");
+    replayAof();
     auto lastCleanUp = std::chrono::steady_clock::now();
+    auto lastAppend = std::chrono::steady_clock::now();
     auto lastSnapShot = std::chrono::steady_clock::now();
     struct timespec timout = {1,0};
     pid_t childPid = -1;
@@ -63,6 +67,10 @@ int main(){
         if(now - lastCleanUp >= std::chrono::seconds(1)){
             clearExpiredKeys();
             lastCleanUp = now;
+        }
+         if(now - lastAppend >= std::chrono::seconds(1)){
+            fsyncAof();
+            lastAppend = now;
         }
 
         if(childPid!=-1){
