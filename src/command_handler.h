@@ -6,5 +6,6 @@
 #include "commands/list_commands.h"
 #include "commands/hash_commands.h"
 #include "commands/set_commands.h"
+#include "rdb.h"
 
 RespMessage handleCommand(const RespMessage &message);
