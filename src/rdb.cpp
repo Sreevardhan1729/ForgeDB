@@ -1,12 +1,10 @@
 #include "rdb.h"
 #include "datastore.h"
-#include "utils.h"
 #include <__filesystem/path.h>
 #include <cctype>
 #include <chrono>
 #include <cstdio>
 #include <ctime>
-#include <filesystem>
 #include <optional>
 #include <string_view>
 #include <sys/fcntl.h>
@@ -52,7 +50,7 @@ std::string serializeHash(std::unordered_map<std::string,std::string> &data){
     std::string len = std::to_string(data.size());
     std::string message = len;
     appendEnd(message);
-    for(auto [key,value]:data){
+    for(auto &[key,value]:data){
         message+=serializeString(key);
         message+=serializeString(value);
     }
@@ -287,7 +285,10 @@ int loadRDB(const char *filename){
         }
         data.append(buffer,numberOfBytesRead);
     }
-    deserializeStore(data);
+    if(deserializeStore(data)==-1){
+        return -1;
+    }
+    
     close(fd);
     return 1;
 }

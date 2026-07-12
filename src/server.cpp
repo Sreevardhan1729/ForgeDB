@@ -10,9 +10,11 @@
 #include <sys/event.h>
 #include <sys/fcntl.h>
 #include <sys/socket.h>
+#include <sys/wait.h>
 #include <unistd.h>
 #include <unordered_map>
 #include <vector>
+#include "rdb.h"
 #include "resp_message.h"
 #include"resp_parser.h"
 #include "resp_serializer.h"
@@ -47,8 +49,11 @@ int main(){
     }
 
     std::vector<struct kevent> eventList(64);
+    loadRDB("dump.rdb");
     auto lastCleanUp = std::chrono::steady_clock::now();
+    auto lastSnapShot = std::chrono::steady_clock::now();
     struct timespec timout = {1,0};
+    pid_t childPid = -1;
     while(true){
         int numEvents = kevent(kq, nullptr, 0, eventList.data(), 64, &timout);
         if(numEvents==-1){
@@ -58,6 +63,22 @@ int main(){
         if(now - lastCleanUp >= std::chrono::seconds(1)){
             clearExpiredKeys();
             lastCleanUp = now;
+        }
+
+        if(childPid!=-1){
+            int status;
+            pid_t result = waitpid(childPid, &status, WNOHANG);
+            if(result==childPid){
+                childPid=-1;
+            }
+        }
+        if(childPid==-1 && now - lastSnapShot >= std::chrono::seconds(60)){
+            childPid = fork();
+            if(childPid==0){
+                saveRDB("dump.rdb");
+                _exit(0);
+            }
+            lastSnapShot=now;
         }
 
         for(int idx=0;idx<numEvents;idx++){
