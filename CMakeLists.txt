@@ -29,6 +29,7 @@ add_library(resp_lib
     src/utils.cpp
     src/rdb.cpp
     src/aof.cpp
+    src/pubsub.cpp
     src/command_handler.cpp)
 
 
