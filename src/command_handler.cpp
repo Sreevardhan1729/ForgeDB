@@ -1,7 +1,9 @@
 #include "command_handler.h"
+#include "pubsub.h"
 #include "resp_message.h"
 #include <algorithm>
 #include<functional>
+#include <iostream>
 #include <string>
 #include <unordered_map>
 #include "aof.h"
@@ -31,10 +33,18 @@ static std::unordered_map<std::string, std::function<RespMessage(const RespMessa
     {"SREM",handleSrem},
     {"SINTER",handleSinter},
 };
-
-RespMessage handleCommand(const RespMessage &message){
+static std::unordered_map<std::string, std::function<RespMessage(const RespMessage&,int)>> pubsubDistatchTable={
+    {"PUBLISH",handlePublish},
+    {"SUBSCRIBE",handleSubscribe},
+    {"UNSUBSCRIBE",handleUnSubscribe},
+};
+RespMessage handleCommand(const RespMessage &message,int clientFd){
     std::string commandName = message.elements[0].data;
     std::transform(commandName.begin(),commandName.end(),commandName.begin(),::toupper);
+    auto pit = pubsubDistatchTable.find(commandName);
+    if(pit!=pubsubDistatchTable.end()){
+        return pit->second(message,clientFd);
+    }   
     auto it = dispatchTable.find(commandName);
     if(it!=dispatchTable.end()){
         RespMessage result = it->second(message);

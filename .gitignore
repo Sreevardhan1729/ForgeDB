@@ -2,3 +2,5 @@ build/
 test.txt
 .cache/
 output
+appendonly.aof
+dump.rdb

@@ -14,6 +14,7 @@
 #include <unistd.h>
 #include <unordered_map>
 #include <vector>
+#include "pubsub.h"
 #include "rdb.h"
 #include "resp_message.h"
 #include"resp_parser.h"
@@ -107,6 +108,7 @@ int main(){
                     int numberOfBytesRead = read(event.ident, buffer, sizeof(buffer));
                     if(numberOfBytesRead==0){
                         per_client_buffer.erase(event.ident);
+                        unsubscribeClient(event.ident);
                         close(event.ident);
                         continue;
                     }
@@ -124,7 +126,7 @@ int main(){
                                 break;
                             }
                             else if(dataRead.value().type==RespType::Array){
-                                data = handleCommand(dataRead.value());
+                                data = handleCommand(dataRead.value(),event.ident);
                                 currData.erase(0,pos);
                             }
                             else{

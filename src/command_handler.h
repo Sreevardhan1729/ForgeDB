@@ -8,4 +8,4 @@
 #include "commands/set_commands.h"
 #include "rdb.h"
 
-RespMessage handleCommand(const RespMessage &message);
+RespMessage handleCommand(const RespMessage &message,int clientFd=-1);
