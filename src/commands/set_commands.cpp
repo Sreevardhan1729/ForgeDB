@@ -4,7 +4,7 @@
 
 RespMessage handleSadd(const RespMessage &message){
     if(message.elements.size()<3){
-        return errorMessage("SADD need to have atleast 2 arguments");
+        return errorMessage("SADD need to have at least 2 arguments");
     }
     auto it = store.find(message.elements[1].data);
     int count=0;
@@ -71,7 +71,7 @@ RespMessage handleSismember(const RespMessage &message){
 }
 RespMessage handleSrem(const RespMessage &message){
     if(message.elements.size()<3){
-        return errorMessage("SREM need to have atleast 2 arguments");
+        return errorMessage("SREM need to have at least 2 arguments");
     }
     auto it = store.find(message.elements[1].data);
     int count=0;
@@ -95,7 +95,7 @@ RespMessage handleSrem(const RespMessage &message){
 }
 RespMessage handleSinter(const RespMessage &message){
     if(message.elements.size()<=2){
-        return errorMessage("SINTER need to have atleast 1 arguments");
+        return errorMessage("SINTER need to have at least 1 arguments");
     }
     auto it = store.find(message.elements[1].data);
     RespMessage result;

@@ -55,7 +55,7 @@ RespMessage handleHget(const RespMessage &message){
 }
 RespMessage handleHdel(const RespMessage &message){
     if(message.elements.size()<3){
-        return errorMessage("DEL need to have atleast 2 arguments");
+        return errorMessage("DEL need to have at least 2 arguments");
     }
     auto it = store.find(message.elements[1].data);
     int count=0;

@@ -4,7 +4,7 @@
 
 RespMessage handleLpush(const RespMessage &message){
     if(message.elements.size()<3){
-        return errorMessage("LPUSH should have atleast 2 arguments");
+        return errorMessage("LPUSH should have at least 2 arguments");
     }
     auto it = store.find(message.elements[1].data);
     
@@ -30,7 +30,7 @@ RespMessage handleLpush(const RespMessage &message){
 }
 RespMessage handleRpush(const RespMessage &message){
     if(message.elements.size()<3){
-        return errorMessage("LPUSH should have atleast 2 arguments");
+        return errorMessage("RPUSH should have at least 2 arguments");
     }
     auto it = store.find(message.elements[1].data);
     if(it!=store.end()){
@@ -112,7 +112,7 @@ RespMessage handleLrange(const RespMessage &message){
         std::optional<int> start = getNumber(message.elements[2].data);
         std::optional<int> end = getNumber(message.elements[3].data);
         if(!start.has_value() || !end.has_value()){
-            return errorMessage("Expiratoion number format wrong");
+            return errorMessage("value is not an integer or out of range");
         }
         const std::deque<std::string> &currList = *value;
         int currSize = currList.size();

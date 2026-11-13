@@ -56,6 +56,6 @@ RespMessage handleCommand(const RespMessage &message,int clientFd){
         return result;
     }
     else{
-        return errorMessage("Invlaid Dispatcher command");
+        return errorMessage("unknown command '"+message.elements[0].data+"'");
     }
 }

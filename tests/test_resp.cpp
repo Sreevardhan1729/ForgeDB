@@ -141,3 +141,43 @@ TEST(storeTests, rouondTripListWithTIme){
     EXPECT_LT(absDiff,std::chrono::seconds(2));
     clearStore();
 }
+static RespMessage cmd(std::vector<std::string> args){
+    RespMessage message;
+    message.type = RespType::Array;
+    for(const std::string &arg : args){
+        message.elements.push_back(RespMessage{RespType::Bulk,arg});
+    }
+    return message;
+}
+
+TEST(CommandTests, ttlRoundsLikeRedis){
+    clearStore();
+    EXPECT_EQ(handleCommand(cmd({"SET","k","v","EX","30"})),(RespMessage{RespType::Simple,"OK"}));
+    EXPECT_EQ(handleCommand(cmd({"TTL","k"})),(RespMessage{RespType::Integer,"30"}));
+    clearStore();
+}
+
+TEST(CommandTests, setAcceptsLowercaseEx){
+    clearStore();
+    EXPECT_EQ(handleCommand(cmd({"SET","k","v","ex","30"})),(RespMessage{RespType::Simple,"OK"}));
+    EXPECT_EQ(handleCommand(cmd({"TTL","k"})),(RespMessage{RespType::Integer,"30"}));
+    clearStore();
+}
+
+TEST(CommandTests, unknownCommandNamesIt){
+    EXPECT_EQ(handleCommand(cmd({"FOO"})),(RespMessage{RespType::Error,"unknown command 'FOO'"}));
+}
+
+TEST(CommandTests, expirationErrorsSpelledRight){
+    clearStore();
+    EXPECT_EQ(handleCommand(cmd({"SET","k","v","EX","abc"})),(RespMessage{RespType::Error,"Expiration value format wrong"}));
+    handleCommand(cmd({"SET","k","v"}));
+    EXPECT_EQ(handleCommand(cmd({"EXPIRE","k","abc"})),(RespMessage{RespType::Error,"Expiration number format wrong"}));
+    clearStore();
+}
+
+TEST(UtilsTests, getNumberRejectsEmptyAndLoneMinus){
+    EXPECT_EQ(getNumber(""),std::nullopt);
+    EXPECT_EQ(getNumber("-"),std::nullopt);
+    EXPECT_EQ(getNumber("-5"),std::optional<int>(-5));
+}

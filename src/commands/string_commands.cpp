@@ -1,14 +1,21 @@
 #include "string_commands.h"
 #include "../datastore.h"
 #include "../utils.h"
+#include <algorithm>
+#include <cctype>
+
+static bool isExOption(std::string option){
+    std::transform(option.begin(),option.end(),option.begin(),::toupper);
+    return option=="EX";
+}
 RespMessage handleSet(const RespMessage &message){
-    if(message.elements.size()!=3 && (message.elements.size()!=5 || message.elements[3].data!="EX")){
+    if(message.elements.size()!=3 && (message.elements.size()!=5 || !isExOption(message.elements[3].data))){
         return errorMessage("SET accepts only 2 or 4 arguments");
     }
     if(message.elements.size()==5){
         std::optional<int> val = getNumber(message.elements[4].data);
         if(!val.has_value()){
-            return errorMessage("Expiratoion value format wrong");
+            return errorMessage("Expiration value format wrong");
         }
         if(val.value()>=0){
             std::chrono::steady_clock::time_point expiresAt = std::chrono::steady_clock::now() + std::chrono::seconds(val.value());

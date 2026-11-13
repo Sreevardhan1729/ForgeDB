@@ -4,6 +4,9 @@
 #include <optional>
 
 std::optional<int> getNumber(std::string_view time){
+    if(time.empty() || time == "-"){
+        return std::nullopt;
+    }
     bool negative = false;
     int pos=0;
     int ans=0;
